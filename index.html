@@ -1,0 +1,481 @@
+
+<!DOCTYPE html>
+<html>
+    <head>
+    <style>
+        
+body {
+    background-color: #926229;
+}
+canvas{
+    position:absolute;
+    top:10px;
+    left:10px;
+    background-color:#040;
+}
+.cols{
+    position:absolute;left:0%;
+    color:tomato;
+    text-align:center;
+    width:70%;
+    height:auto;
+    background-color:white;
+    padding:5% 5%;
+    line-height:2;
+    left:50%;top:50%;
+    transform:translate(-50%,-50%);
+    box-shadow: 0px 4px 8px 1px #0000005c;
+    visibility:hidden;
+    opacity:0;
+}
+.rows{
+    font-weight:bold;
+    font-family:Arvo;
+}
+.restart{
+    width:50%;
+    height:25%;
+    border:none;
+    box-shadow: 0px 4px 8px 1px #0000005c;
+    background-color:#03A9F4;
+    padding:5%;
+}
+button:focus{
+    outline:none;
+}
+.show{
+    
+}
+@keyframes pop
+{
+       from{
+    opacity:0;
+    visibility:hidden;
+    transform:scale(0.2,0.2);
+    }
+    to{
+    opacity:1;
+    visibility:visible;
+    transform:translate(1,1);
+    }
+    
+}
+.show{
+    animation:1s pop forwards;
+}
+
+    </style>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">    
+    <link href="https://fonts.googleapis.com/css?family=Arvo&display=swap" rel="stylesheet">
+        <title>Page Title</title>
+    </head>
+    <body>
+        <canvas></canvas>
+        <div class="cols">
+       <div class="rows">You Complete The Match</div> 
+       <div class="rows"><hr><b class="score">Score:0</b><hr></div>
+       <button onclick="restart()" class="restart">Restart</button>   
+        </div>
+        
+        <script>
+          
+
+var canvas, ctx;
+var lever;
+var stick;
+var balls=[];
+var touch ={};
+var friction = 0.02;
+var holes = [];
+var slider;
+var slide;
+var show_ = true;
+var w = null;
+var h = null;
+var game_over = false;
+var balls_bg = [
+[1,1,1,1,1,1,1],
+[1,0,1,0,1,0,1],
+[1,0,1,0,1,0,1],
+[1,1,1,1,1,1,1],
+];
+
+var alert_box;
+var score =0;
+var score_info;
+var colors = [['#FFC107',1], ['#FF6F69',2],['#00C3DF',3], ['#03A9F4',4], ['#F83600',5],['#FFC107',6]];
+window.onload = load;
+var r = innerWidth/14;
+var score =0;
+function load() {
+  canvas = document.querySelector("canvas");
+  h=canvas.height = innerHeight-20;
+  w=canvas.width = innerWidth-20;
+  ctx = canvas.getContext("2d"); 
+  alert_box = document.getElementsByClassName("cols")[0];
+   score_info= document.getElementsByClassName("score")[0];
+  
+ holes.push(new Hole(0,r/2,r));
+ holes.push(new Hole(w,r/2,r));
+ holes.push(new Hole(0,h-r/2,r));
+ holes.push(new Hole(w,h-r/2,r));
+ holes.push(new Hole(0,h/2-r/2,r));
+ holes.push(new Hole(w,h/2-r/2,r));
+ holes.push(new Hole(w/2,0,r));
+ holes.push(new Hole(w/2,h,r));
+ for(let i in balls_bg){
+     for(let j in balls_bg[i]){
+         if(balls_bg[i][j]==1){
+        balls.push(new Ball(r/1.3*j+w/2-r*3/1.3,r/1.3*i+h/2-r*6/1.3,r/3,0,0,colors[i][0],colors[i][1])) ;  
+         }
+     }
+ }
+slider = new Ball(w/2,h-150,r/2.5,0,0,"white",0);  
+  stick = new Stick();    
+  window.requestAnimationFrame(update);
+  
+};
+
+
+function update() {
+  ctx.clearRect(0, 0, w, h);
+if(!game_over){
+show_scores();
+  for(let h of holes){
+      h.show();
+  }
+  for (var i in balls) {
+    var b = balls[i];
+    b.show();
+  };  
+ if(show_){
+  touch.x = slider.x;
+  touch.y = slider.y;
+  stick.show();
+  }
+  touch.dist= fDist(touch.x2||touch.x+1,touch.y2||touch.y+1,touch.x||touch.x2-1,touch.y||touch.y2-1);
+  slider.show();   
+ if(show_){    
+   showControl();
+   }
+   for(let j in holes){
+    for(let i in balls){       
+    if(Dist(balls[i].x,balls[i].y,holes[j].x,holes[j].y)<r/1.1){
+    score+=balls[i].points;
+            balls.splice(i,1);
+        }
+        else if(Dist(slider.x,slider.y,holes[j].x,holes[j].y)<r/1.3){
+         slider =  new Ball(w/2,h-150,r/2.5,0,0,"white");  
+         score--;
+        }
+    }
+    }
+};
+    if(balls.length==0){
+    game_over =true;    
+    alert_box.classList.add("show");
+    score_info.innerText="Score : "+score;
+    };
+window.requestAnimationFrame(update);
+};
+window.addEventListener("touchstart",function(e) {
+if(!game_over){
+if(show_){
+touch.x2 = e.touches[0].pageX;
+touch.y2 = e.touches[0].pageY;
+touch.ang = Ang(touch.x2, touch.y2, stick.target.x, stick.target.y);
+  stick.angle = touch.ang;
+  stick.adjust()
+}
+};
+});
+window.addEventListener("touchmove",function(e) {
+if(!game_over){
+if(show_){
+  touch.x2 = e.touches[0].pageX;
+  touch.y2 = e.touches[0].pageY;  
+  touch.ang = Ang(touch.x2, touch.y2, stick.target.x, stick.target.y);
+  stick.angle = touch.ang;
+  stick.adjust();
+  };
+  };
+});
+
+window.addEventListener("touchend",function(e) {
+if(!game_over){
+ if(show_){
+ slider.launch(touch.dist*0.8);
+    touch ={};
+    show_= false;    
+  };
+  };
+});
+
+
+function reset() {
+var stop=0;
+  for (var i in balls) {
+    if(slider.vx == 0 && slider.vy == 0){
+    if(balls[i].vx==0&&balls[i].vy==0){
+        stop++;
+    }
+    if(stop==balls.length){
+    let x = slider.x;
+    let y =slider.y;
+     resetBoard(x,y);
+     };
+    };
+  };  window.requestAnimationFrame(reset);
+};
+
+function resetBoard(x,y) {
+slider = new Ball(x,y,r/2.5,0,0,"white");
+  show_= true;
+      stick.target.x = slider.x,
+        stick.target.y = slider.y,
+        stick.target.xrad =
+        Math.cos(stick.angle) * 14  + slider.x;
+        stick.target.yrad =
+        Math.sin(stick.angle) * 14 + slider.y;
+   stick.len=0;    
+  stick.adjust();
+};
+
+function Stick() {
+ this.angle = 2;
+ this.target = {};
+ this.len = 0;
+ this.target.x = slider.x,
+ this.target.y = slider.y;
+ this.head = {
+     x:Math.cos(this.angle)*this.len,
+     y:Math.sin(this.angle)*this.len
+     }
+this.show= function(){ 
+      ctx.save(); 
+       ctx.setLineDash([4, 2])   
+ctx.beginPath();
+   ctx.moveTo(this.head.x,  this.head.y);       ctx.lineTo(this.target.xrad,this.target.yrad);      ctx.stroke();  
+    ctx.beginPath();
+       ctx.beginPath();
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.arc(this.target.x, this.target.y, r/1.5, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.restore()
+};
+this.adjust = function(){
+touch.dist = fDist(touch.x2||touch.x+1,touch.y2||touch.y+1,touch.x||touch.x2+1,touch.y||touch.y2+1);
+if(touch.dist>100){
+  touch.dist = 100;
+};
+
+  this.target.xrad =
+    Math.cos(stick.angle) *-r/2+this.target.x;
+  this.target.yrad =
+    Math.sin(this.angle) *-r/2+ this.target.y;
+this.head.x = Math.cos(this.angle) * -touch.dist*2.5 + stick.target.x,
+stick.head.y = Math.sin(this.angle) * -touch.dist*2.5 + this.target.y;
+     
+};
+};
+
+
+function Hole(x,y,r){
+    this.x = x;
+    this.y = y;
+    this.r = r;
+    this.show = function(){
+    ctx.save();
+    ctx.beginPath();
+ ctx.fillStyle="black";
+ ctx.arc(this.x,this.y,this.r/1.2,2*Math.PI,false);
+ ctx.fill();
+ ctx.closePath()
+ ctx.restore();
+    }
+}
+
+
+function Ball(x, y, r, a, v, c,p) {
+  this.x = x;
+  this.y = y;
+  this.a = a || 0;
+  this.r = r;
+  this.v = v ;
+  this.color = c;
+  this.friction = 0.016;
+  this.points=p;
+  this.vx = Math.cos(this.a) * this.v;
+  this.vy = Math.sin(this.a) * this.v;
+  this.show = function(){
+     ctx.save();
+    ctx.beginPath();
+    ctx.lineWidth = 2 ;
+     ctx.shadowBlur = 10;
+    ctx.shadowColor = "white";
+    ctx.fillStyle = this.color;
+    ctx.arc(this.x, this.y, this.r, 0, 2 * Math.PI);
+    ctx.fill();
+   ctx.closePath()
+    ctx.restore();
+    this.update();
+    this.checkCollisions();
+    this.edeges() 
+  };
+  this.update = function() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vx *= (1 - this.friction);
+    this.vy *= (1 - this.friction);
+    this.vx = Math.abs(this.vx) < 0.1 ? 0 : this.vx;
+    this.vy = Math.abs(this.vy) < 0.1 ? 0 : this.vy;
+  };
+  this.checkCollisions = function() {
+    for (var i in balls) {
+     if (balls[i] == this) continue;
+      var dist =
+        Dist(this.x, this.y, balls[i].x ||slider.x, balls[i].y || slider.y);
+      if (dist < (this.r + balls[i].r*1.5)) {
+        this.applyforce(balls[i]);
+      };
+    };    
+  };
+  this.applyforce= function(b){
+      var vx= this.vx - b.vx;
+  var vy = this.vy - b.vy;
+  var x= b.x - this.x;
+  var y= b.y - this.y;
+  if (vx * x+ vy * y >= 0) {
+    var ang = -Math.atan2(y, x);
+    var u1 = rotate(this.vx, this.vy, ang);
+    var u2 = rotate(b.vx, b.vy, ang);
+    var v1 = {x: u2.x,y: u1.y};
+    var v2 = {x: u1.x,y: u2.y};
+    var f1 = rotate(v1.x, v1.y, -ang);
+    var f2 = rotate(v2.x, v2.y, -ang);
+    this.vx = f1.x;    
+    this.vy = f1.y;
+    b.vx = f2.x;
+    b.vy = f2.y;
+  };
+  }
+  this.launch = function(d){
+    this.v = d / 6;
+    this.a =stick.angle+Math.PI;
+    this.vx = Math.cos(this.a) * this.v;
+    this.vy = Math.sin(this.a) * this.v; 
+    stick.adjust();
+    reset();
+  };
+  this.edeges = function(){
+      if(this.x<10){
+          this.x= 11;
+          this.vx*=-1;
+      }
+      else if(this.x>w-this.r/2-10){
+          this.x= w-this.r/2-9;
+          this.vx*=-1;
+      }
+      else if(this.y<10){
+          this.y =11;
+          this.vy*=-1;
+      }
+      else if (this.y>h-this.r/2-10){
+          this.y =h-this.r/2-9;
+          this.vy*=-1;
+      }
+      
+  }
+};
+
+function showControl(){
+if(touch.dist>100){touch.dist=100;}
+    ctx.save();
+    ctx.beginPath();
+    ctx.setLineDash([4, 2]) 
+    ctx.lineWidth = 1 ;
+    ctx.strokeStyle = "black";
+    ctx.arc(touch.x2 ||touch.x, touch.y2||touch.y,r*1.2, 0, 2 * Math.PI);
+    ctx.stroke()
+    ctx.beginPath();
+    ctx.arc(touch.x2 ||touch.x, touch.y2||touch.y,r*0.9, 0, 2 * Math.PI);
+    ctx.stroke();
+   ctx.closePath();
+    ctx.beginPath();
+    ctx.lineWidth = 1 ;
+    ctx.setLineDash([4, 2]) 
+    ctx.stroekStyle = "black";
+    ctx.moveTo(touch.x,touch.y);
+    ctx.lineTo(touch.x2,touch.y2);
+    ctx.stroke();
+    ctx.fill();
+   ctx.closePath();
+    ctx.beginPath();
+    ctx.lineWidth = 1 ;
+    ctx.setLineDash([8, 2]) 
+    ctx.strokeStyle = "black";
+    ctx.arc(touch.x, touch.y,touch.dist/2*2, 0, 2 * Math.PI);
+    ctx.stroke()
+    ctx.beginPath();
+    ctx.arc(touch.x, touch.y,touch.dist/2*1.5, 0, 2 * Math.PI);
+    ctx.stroke()
+   ctx.closePath()
+    ctx.restore();
+    
+};
+
+function rotate(x, y, angle) {
+  var length = Math.sqrt(x * x + y * y);
+  angle += Math.atan2(y, x);
+  return {x: length * Math.cos(angle),y: length * Math.sin(angle)};
+  
+  };
+
+function fDist(a,b,c,d){
+return Math.hypot(a-c,b-d);
+};
+function Ang(a,b,c,d){
+return Math.atan2(b-d,a-c);   
+};
+function Dist(a,b,c,d){
+var x=b-d;
+var y=a-c;
+return Math.sqrt(x*x+y*y);
+};
+
+function restart(){
+alert_box.classList.remove("show");
+    touch ={}; 
+   game_over = false;
+   balls=[];
+   for(let i in balls_bg){
+     for(let j in balls_bg[i]){
+         if(balls_bg[i][j]==1){
+        balls.push(new Ball(r/1.3*j+w/2-r*3/1.3,r/1.3*i+h/2-r*6/1.3,r/3,0,0,colors[i][0],colors[i][1])) ;  
+         }
+     }
+ }
+    slider = new Ball(w/2,h-150,r/2.5,0,0,"white",0);  
+  stick = new Stick();
+  score=0
+}
+function show_scores(){
+    ctx.fillStyle ="rgba(255,255,255,0.5)";
+  ctx.font="bold "+r*1.5+"px Arvo";
+  ctx.textAlign="center";
+  ctx.fillText("Score : "+score,w/2,h-90);  
+  ctx.beginPath();
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 1;
+  ctx.moveTo(0, h-150);
+  ctx.lineTo(w, h-150);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(w/2,h-150,r,Math.PI*2,false);
+  ctx.stroke();
+ 
+}   
+        </script>
+    </body>
+</html>
